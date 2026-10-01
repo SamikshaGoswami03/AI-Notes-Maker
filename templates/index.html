@@ -1,159 +1,221 @@
 ﻿<!doctype html>
+
 <html lang="en">
 
 <head>
     <meta charset="utf-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1"
-    >
+```
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+>
 
-    <title>AI Notes Maker</title>
+<title>AI Notes Maker</title>
 
-    <link
-        rel="stylesheet"
-        href="/static/styles.css"
-    >
+<link
+    rel="stylesheet"
+    href="/static/styles.css"
+>
+```
+
 </head>
 
 <body>
 
 <main class="container">
 
-    <!-- Header -->
+```
+<!-- Header -->
 
-    <header class="header">
+<header class="header">
 
-        <div class="logo">
-            ✦
-        </div>
+    <div class="logo">
+        ✦
+    </div>
 
-        <h1>AI Notes Maker</h1>
+    <h1>AI Notes Maker</h1>
 
-        <p class="subtitle">
-            Turn your study material into clear, organized notes.
-        </p>
+    <p class="subtitle">
+        Turn your study material into clear, organized notes.
+    </p>
 
-    </header>
-
-
-    <!-- Source Input -->
-
-    <section id="input">
-
-        <label for="topic">
-            What are you studying?
-        </label>
-
-        <input
-            id="topic"
-            type="text"
-            placeholder="e.g. Photosynthesis"
-        >
+</header>
 
 
-        <label for="sources">
+<!-- Source Input -->
+
+<section id="input">
+
+    <label for="topic">
+        What are you studying?
+    </label>
+
+    <input
+        id="topic"
+        type="text"
+        placeholder="e.g. Photosynthesis"
+    >
+
+
+    <div class="source-heading">
+
+        <label>
             Add your study material
         </label>
 
-        <textarea
-            id="sources"
-            placeholder="Paste your sources here. Separate different sources with a blank line."
-        ></textarea>
+        <span>
+            Add at least 2 sources
+        </span>
+
+    </div>
 
 
-        <p class="hint">
-            ✦ Add two or more sources for a better Coverage Check.
+    <div id="sources-container">
+
+        <div class="source-card">
+
+            <div class="source-card-header">
+
+                <strong>
+                    Source 1
+                </strong>
+
+            </div>
+
+            <textarea
+                class="source-input"
+                placeholder="Paste your first source here..."
+            ></textarea>
+
+        </div>
+
+
+        <div class="source-card">
+
+            <div class="source-card-header">
+
+                <strong>
+                    Source 2
+                </strong>
+
+            </div>
+
+            <textarea
+                class="source-input"
+                placeholder="Paste your second source here..."
+            ></textarea>
+
+        </div>
+
+    </div>
+
+
+    <button
+        id="add-source"
+        type="button"
+        class="secondary-button"
+    >
+        + Add another source
+    </button>
+
+
+    <p class="hint">
+        ✦ Use separate source boxes so each source can be identified clearly.
+    </p>
+
+
+    <button
+        id="generate"
+        type="button"
+    >
+        ✦ Generate Notes
+    </button>
+
+</section>
+
+
+<!-- Results -->
+
+<section id="results">
+
+
+    <!-- Coverage -->
+
+    <aside
+        id="coverage"
+        class="panel"
+    >
+
+        <div class="panel-title">
+
+            <span>☑</span>
+
+            <h2>Coverage Check</h2>
+
+        </div>
+
+        <p class="panel-description">
+            See which important concepts appear in your notes.
         </p>
 
+        <div id="coverage-list">
 
-        <button id="generate">
-            ✦ Generate Notes
-        </button>
+            <div class="empty-state">
+                Your coverage results will appear here.
+            </div>
 
-    </section>
+        </div>
 
-
-    <!-- Results -->
-
-    <section id="results">
+    </aside>
 
 
-        <!-- Coverage -->
+    <!-- Notebook -->
 
-        <aside
-            id="coverage"
-            class="panel"
-        >
+    <article
+        id="notebook"
+        class="notebook"
+    >
 
-            <div class="panel-title">
+        <div class="notebook-header">
 
-                <span>☑</span>
+            <span class="notebook-icon">
+                ♡
+            </span>
 
-                <h2>Coverage Check</h2>
+            <div>
+
+                <h2>My Notes</h2>
+
+                <p>
+                    Organized study material
+                </p>
 
             </div>
 
-            <p class="panel-description">
-                See which important concepts appear in your notes.
-            </p>
-
-            <div id="coverage-list">
-                <div class="empty-state">
-                    Your coverage results will appear here.
-                </div>
-            </div>
-
-        </aside>
+        </div>
 
 
-        <!-- Notebook -->
+        <div id="notes-area">
 
-        <article
-            id="notebook"
-            class="notebook"
-        >
+            <div class="empty-notes">
 
-            <div class="notebook-header">
+                <span>✎</span>
 
-                <span class="notebook-icon">
-                    ♡
-                </span>
-
-                <div>
-
-                    <h2>My Notes</h2>
-
-                    <p>
-                        Organized study material
-                    </p>
-
-                </div>
+                <p>
+                    Your notes will appear here.
+                </p>
 
             </div>
 
+        </div>
 
-            <div id="notes-area">
+    </article>
 
-                <div class="empty-notes">
-
-                    <span>✎</span>
-
-                    <p>
-                        Your notes will appear here.
-                    </p>
-
-                </div>
-
-            </div>
-
-        </article>
-
-    </section>
+</section>
+```
 
 </main>
-
 
 <script src="/static/app.js"></script>
 

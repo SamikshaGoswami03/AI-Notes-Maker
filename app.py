@@ -1,31 +1,82 @@
 ﻿from flask import Flask, render_template, request, jsonify
-from ai.processor import extract_concepts, generate_notes, compute_coverage
+
+from ai.processor import (
+    generate_study_package,
+    compute_coverage
+)
+
 
 app = Flask(__name__)
 
-@app.route('/')
+
+@app.route("/")
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
-@app.route('/generate', methods=['POST'])
+
+@app.route("/generate", methods=["POST"])
 def generate():
-    data = request.json
-    topic = data.get('topic', '').strip()
-    sources = data.get('sources', [])
 
-    if not topic or not sources:
-        return jsonify({'error': 'Topic and at least one source are required.'}), 400
+    data = request.get_json(
+        silent=True
+    ) or {}
 
-    concepts = extract_concepts(sources)
-    notes = generate_notes(topic, sources)
-    coverage = compute_coverage(concepts, notes)
+    topic = data.get(
+        "topic",
+        ""
+    ).strip()
+
+    sources = data.get(
+        "sources",
+        []
+    )
+
+    sources = [
+        source.strip()
+        for source in sources
+        if isinstance(source, str)
+        and source.strip()
+    ]
+
+    if not topic:
+        return jsonify({
+            "error": "Please enter a topic."
+        }), 400
+
+    if len(sources) < 2:
+        return jsonify({
+            "error": "Please provide at least 2 sources."
+        }), 400
+
+    package = generate_study_package(
+        topic,
+        sources
+    )
+
+    concepts = package.get(
+        "concepts",
+        []
+    )
+
+    notes = package.get(
+        "notes",
+        {"sections": []}
+    )
+
+    coverage = compute_coverage(
+        concepts,
+        notes
+    )
 
     return jsonify({
-        'topic': topic,
-        'concepts': concepts,
-        'notes': notes,
-        'coverage': coverage
+        "topic": topic,
+        "concepts": concepts,
+        "notes": notes,
+        "coverage": coverage
     })
 
-if __name__ == '__main__':
-    app.run(debug=True)
+
+if __name__ == "__main__":
+    app.run(
+        debug=True
+    )

@@ -2,13 +2,115 @@
 let lastHighlight = null;
 
 
-/* =====================================
-   GENERATE NOTES
-===================================== */
+// -----------------------------
+// SOURCE MANAGEMENT
+// -----------------------------
 
-document
-    .getElementById("generate")
-    .addEventListener("click", async () => {
+const addSourceButton =
+    document.getElementById("add-source");
+
+const sourcesContainer =
+    document.getElementById("sources-container");
+
+
+addSourceButton.addEventListener(
+    "click",
+    () => {
+
+        const card =
+            document.createElement("div");
+
+        card.className =
+            "source-card";
+
+        const sourceNumber =
+            sourcesContainer.querySelectorAll(
+                ".source-card"
+            ).length + 1;
+
+        card.innerHTML = `
+            <div class="source-card-header">
+
+                <strong>
+                    Source ${sourceNumber}
+                </strong>
+
+                <button
+                    type="button"
+                    class="remove-source"
+                    title="Remove this source"
+                >
+                    ×
+                </button>
+
+            </div>
+
+            <textarea
+                class="source-input"
+                placeholder="Paste your source here..."
+            ></textarea>
+        `;
+
+        sourcesContainer.appendChild(
+            card
+        );
+
+        const removeButton =
+            card.querySelector(
+                ".remove-source"
+            );
+
+        removeButton.addEventListener(
+            "click",
+            () => {
+
+                card.remove();
+
+                renumberSources();
+            }
+        );
+    }
+);
+
+
+function renumberSources() {
+
+    const cards =
+        document.querySelectorAll(
+            ".source-card"
+        );
+
+    cards.forEach(
+        (card, index) => {
+
+            const heading =
+                card.querySelector(
+                    ".source-card-header strong"
+                );
+
+            if (heading) {
+
+                heading.textContent =
+                    `Source ${index + 1}`;
+            }
+        }
+    );
+}
+
+
+// -----------------------------
+// GENERATE NOTES
+// -----------------------------
+
+const generateButton =
+    document.getElementById(
+        "generate"
+    );
+
+
+generateButton.addEventListener(
+    "click",
+    async () => {
 
         const topic =
             document
@@ -16,45 +118,52 @@ document
                 .value
                 .trim();
 
-        const sourcesRaw =
-            document
-                .getElementById("sources")
-                .value
-                .trim();
+        const sources =
+            Array.from(
+                document.querySelectorAll(
+                    ".source-input"
+                )
+            )
+                .map(
+                    (input) =>
+                        input.value.trim()
+                )
+                .filter(
+                    (source) =>
+                        source.length > 0
+                );
 
 
-        if (!topic || !sourcesRaw) {
+        // Basic validation
+        if (!topic) {
 
             alert(
-                "Please provide a topic and source material."
+                "Please enter a topic."
             );
 
             return;
         }
 
 
-        const sources =
-            sourcesRaw
-                .split(/\n\s*\n/)
-                .map(source => source.trim())
-                .filter(Boolean);
+        if (sources.length < 2) {
+
+            alert(
+                "Please provide at least 2 sources."
+            );
+
+            return;
+        }
 
 
-        document
-            .getElementById("coverage-list")
-            .innerHTML =
-            `<div class="empty-state">
-                Generating your Coverage Check...
-            </div>`;
+        // Reset previous highlight state
+        lastHighlight = null;
 
 
-        document
-            .getElementById("notes-area")
-            .innerHTML =
-            `<div class="empty-notes">
-                <span>✦</span>
-                <p>Organizing your study material...</p>
-            </div>`;
+        generateButton.disabled =
+            true;
+
+        generateButton.textContent =
+            "Generating...";
 
 
         try {
@@ -78,46 +187,95 @@ document
                 );
 
 
-            const data =
-                await response.json();
+            let data;
+
+            try {
+
+                data =
+                    await response.json();
+
+            }
+            catch (jsonError) {
+
+                throw new Error(
+                    "The server returned an invalid response."
+                );
+            }
 
 
             if (!response.ok) {
 
                 throw new Error(
                     data.error ||
-                    "Something went wrong."
+                    "Unable to generate notes."
                 );
             }
 
 
-            renderNotes(data.notes);
+            if (
+                !data.notes ||
+                !Array.isArray(
+                    data.notes.sections
+                )
+            ) {
 
-            renderCoverage(data.coverage);
-
-
-        } catch (error) {
-
-            document
-                .getElementById("coverage-list")
-                .innerHTML =
-                `<div class="empty-state">
-                    ${error.message}
-                </div>`;
+                throw new Error(
+                    "The AI returned an invalid notes format."
+                );
+            }
 
 
-            document
-                .getElementById("notes-area")
-                .innerHTML = "";
+            renderNotes(
+                data.topic,
+                data.notes
+            );
+
+
+            applyTopicTheme(
+                data.topic
+            );
+
+
+            renderCoverage(
+                data.concepts,
+                data.coverage
+            );
+
+
         }
-    });
+        catch (error) {
+
+            console.error(
+                "Generation error:",
+                error
+            );
+
+            alert(
+                error.message ||
+                "Something went wrong while generating your notes."
+            );
+
+        }
+        finally {
+
+            generateButton.disabled =
+                false;
+
+            generateButton.textContent =
+                "Generate Notes";
+        }
+    }
+);
 
 
-/* =====================================
-   NOTES
-===================================== */
+// -----------------------------
+// RENDER NOTES
+// -----------------------------
 
-function renderNotes(notes) {
+function renderNotes(
+    topic,
+    notes
+) {
 
     const area =
         document.getElementById(
@@ -125,74 +283,392 @@ function renderNotes(notes) {
         );
 
 
+    /*
+     * IMPORTANT:
+     * index.html already contains
+     * the notebook header.
+     *
+     * Therefore we do NOT create
+     * another header here.
+     */
+
     area.innerHTML = "";
 
 
-    createToolbar(area);
+    // Create highlighting toolbar
+    createToolbar(
+        area
+    );
 
 
-    (notes.sections || [])
-        .forEach((section, index) => {
+    const sections =
+        notes &&
+        Array.isArray(
+            notes.sections
+        )
+            ? notes.sections
+            : [];
+
+
+    if (
+        sections.length === 0
+    ) {
+
+        const empty =
+            document.createElement(
+                "div"
+            );
+
+        empty.className =
+            "empty-notes";
+
+        empty.innerHTML = `
+            <span>✎</span>
+
+            <p>
+                No notes were generated.
+            </p>
+        `;
+
+        area.appendChild(
+            empty
+        );
+
+        setupHighlighting();
+
+        return;
+    }
+
+
+    // Render every note section
+    sections.forEach(
+        (
+            section,
+            index
+        ) => {
 
             const heading =
-                document.createElement("div");
+                document.createElement(
+                    "div"
+                );
 
             heading.className =
                 "section-heading";
 
-            heading.innerText =
+            heading.textContent =
                 section.heading ||
                 `Section ${index + 1}`;
 
 
             const body =
-                document.createElement("div");
+                document.createElement(
+                    "div"
+                );
 
             body.className =
                 "section-body";
 
-            body.innerText =
-                section.body || "";
+            body.textContent =
+                section.body ||
+                "";
 
 
-            const sources =
-                document.createElement("div");
+            const sourceReference =
+                document.createElement(
+                    "div"
+                );
 
-            sources.className =
+            sourceReference.className =
                 "source-reference";
 
 
             const sourceIds =
-                section.source_ids || [];
+                Array.isArray(
+                    section.source_ids
+                )
+                    ? section.source_ids
+                    : [];
 
 
-            sources.innerText =
+            if (
                 sourceIds.length > 0
-                    ? `Source${sourceIds.length > 1 ? "s" : ""}: ${sourceIds.join(", ")}`
-                    : "Source: Not specified";
+            ) {
+
+                sourceReference.textContent =
+                    `Source${
+                        sourceIds.length > 1
+                            ? "s"
+                            : ""
+                    }: ${sourceIds.join(", ")}`;
+
+            }
+            else {
+
+                sourceReference.textContent =
+                    "Source: Not specified";
+            }
 
 
-            area.appendChild(heading);
+            area.appendChild(
+                heading
+            );
 
-            area.appendChild(body);
+            area.appendChild(
+                body
+            );
 
-            area.appendChild(sources);
+            area.appendChild(
+                sourceReference
+            );
 
 
-            enableTextHighlighting(body);
-        });
+            enableTextHighlighting(
+                body
+            );
+        }
+    );
+
+
+    setupHighlighting();
 }
 
 
-/* =====================================
-   ANNOTATION TOOLBAR
-===================================== */
+// -----------------------------
+// COVERAGE CHECK
+// -----------------------------
 
-function createToolbar(area) {
+function renderCoverage(
+    concepts,
+    coverage
+) {
+
+    const list =
+        document.getElementById(
+            "coverage-list"
+        );
+
+
+    list.innerHTML = "";
+
+
+    if (
+        !Array.isArray(concepts) ||
+        concepts.length === 0
+    ) {
+
+        list.innerHTML = `
+            <div class="empty-state">
+                No important concepts were identified.
+            </div>
+        `;
+
+        return;
+    }
+
+
+    const results =
+        Array.isArray(coverage)
+            ? coverage
+            : [];
+
+
+    let coveredCount = 0;
+    let partialCount = 0;
+    let reviewCount = 0;
+
+
+    // Count statuses
+    concepts.forEach(
+        (
+            concept,
+            index
+        ) => {
+
+            const result =
+                results[index] || {};
+
+            const status =
+                String(
+                    result.status ||
+                    "Needs review"
+                ).toLowerCase();
+
+
+            if (
+                status === "covered"
+            ) {
+
+                coveredCount++;
+
+            }
+            else if (
+                status === "partially covered"
+            ) {
+
+                partialCount++;
+
+            }
+            else {
+
+                reviewCount++;
+            }
+        }
+    );
+
+
+    // Summary
+    const summary =
+        document.createElement(
+            "div"
+        );
+
+    summary.className =
+        "coverage-summary";
+
+    summary.innerHTML = `
+        <strong>
+            Coverage Summary
+        </strong>
+
+        <div class="coverage-summary-counts">
+
+            <span>
+                ✓ ${coveredCount} covered
+            </span>
+
+            <span>
+                ◐ ${partialCount} partial
+            </span>
+
+            <span>
+                ! ${reviewCount} review
+            </span>
+
+        </div>
+    `;
+
+    list.appendChild(
+        summary
+    );
+
+
+    // Individual concepts
+    concepts.forEach(
+        (
+            concept,
+            index
+        ) => {
+
+            const result =
+                results[index] || {};
+
+
+            const status =
+                result.status ||
+                "Needs review";
+
+
+            const normalizedStatus =
+                status.toLowerCase();
+
+
+            let className =
+                "coverage-needs-review";
+
+
+            if (
+                normalizedStatus ===
+                "covered"
+            ) {
+
+                className =
+                    "coverage-covered";
+
+            }
+            else if (
+                normalizedStatus ===
+                "partially covered"
+            ) {
+
+                className =
+                    "coverage-partially-covered";
+            }
+
+
+            const item =
+                document.createElement(
+                    "div"
+                );
+
+            item.className =
+                className;
+
+
+            const title =
+                document.createElement(
+                    "strong"
+                );
+
+            title.textContent =
+                concept;
+
+
+            const badge =
+                document.createElement(
+                    "span"
+                );
+
+            badge.textContent =
+                status;
+
+
+            item.appendChild(
+                title
+            );
+
+            item.appendChild(
+                badge
+            );
+
+
+            if (
+                result.explanation
+            ) {
+
+                const explanation =
+                    document.createElement(
+                        "small"
+                    );
+
+                explanation.textContent =
+                    result.explanation;
+
+                item.appendChild(
+                    explanation
+                );
+            }
+
+
+            list.appendChild(
+                item
+            );
+        }
+    );
+}
+
+
+// -----------------------------
+// ANNOTATION TOOLBAR
+// -----------------------------
+
+function createToolbar(
+    area
+) {
 
     const toolbar =
-        document.createElement("div");
-
+        document.createElement(
+            "div"
+        );
 
     toolbar.className =
         "annotation-toolbar";
@@ -200,115 +676,85 @@ function createToolbar(area) {
 
     toolbar.innerHTML = `
         <button
+            type="button"
             class="tool-button active"
             data-color="#fff0a8"
-            title="Yellow highlighter">
+            title="Yellow highlighter"
+        >
             🟨
         </button>
 
         <button
+            type="button"
             class="tool-button"
             data-color="#ffd6df"
-            title="Pink highlighter">
+            title="Pink highlighter"
+        >
             🩷
         </button>
 
         <button
+            type="button"
             class="tool-button"
             data-color="#dcd5f2"
-            title="Lavender highlighter">
+            title="Lavender highlighter"
+        >
             🟪
         </button>
 
         <button
+            type="button"
             class="tool-button"
             data-color="#cfe8d5"
-            title="Green highlighter">
+            title="Green highlighter"
+        >
             🟩
         </button>
 
         <button
+            type="button"
             class="tool-button"
             data-color="#cfe3f2"
-            title="Blue highlighter">
+            title="Blue highlighter"
+        >
             🟦
         </button>
 
         <span class="toolbar-divider"></span>
 
         <button
+            type="button"
             id="undo-highlight"
             class="tool-button"
-            title="Undo last highlight">
+            title="Undo last highlight"
+        >
             ↩
         </button>
 
         <button
+            type="button"
             id="clear-highlights"
             class="tool-button"
-            title="Clear all highlights">
+            title="Clear all highlights"
+        >
             🧹
         </button>
     `;
 
 
-    area.prepend(toolbar);
-
-
-    toolbar
-        .querySelectorAll("[data-color]")
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    currentHighlightColor =
-                        button.dataset.color;
-
-
-                    toolbar
-                        .querySelectorAll(
-                            "[data-color]"
-                        )
-                        .forEach(btn => {
-
-                            btn.classList.remove(
-                                "active"
-                            );
-                        });
-
-
-                    button.classList.add(
-                        "active"
-                    );
-                }
-            );
-        });
-
-
-    document
-        .getElementById("undo-highlight")
-        .addEventListener(
-            "click",
-            undoHighlight
-        );
-
-
-    document
-        .getElementById("clear-highlights")
-        .addEventListener(
-            "click",
-            clearHighlights
-        );
+    area.appendChild(
+        toolbar
+    );
 }
 
 
-/* =====================================
-   TEXT HIGHLIGHTING
-===================================== */
+// -----------------------------
+// TEXT HIGHLIGHTING
+// -----------------------------
 
-function enableTextHighlighting(element) {
+function enableTextHighlighting(
+    element
+) {
 
     element.addEventListener(
         "mouseup",
@@ -318,6 +764,15 @@ function enableTextHighlighting(element) {
                 window.getSelection();
 
 
+            if (
+                !selection ||
+                selection.isCollapsed
+            ) {
+
+                return;
+            }
+
+
             const selectedText =
                 selection
                     .toString()
@@ -325,12 +780,15 @@ function enableTextHighlighting(element) {
 
 
             if (!selectedText) {
+
                 return;
             }
 
 
             const range =
-                selection.getRangeAt(0);
+                selection.getRangeAt(
+                    0
+                );
 
 
             if (
@@ -338,6 +796,9 @@ function enableTextHighlighting(element) {
                     range.commonAncestorContainer
                 )
             ) {
+
+                selection.removeAllRanges();
+
                 return;
             }
 
@@ -347,10 +808,8 @@ function enableTextHighlighting(element) {
                     "span"
                 );
 
-
             span.className =
                 "highlight";
-
 
             span.style.backgroundColor =
                 currentHighlightColor;
@@ -358,18 +817,27 @@ function enableTextHighlighting(element) {
 
             try {
 
+                /*
+                 * surroundContents works when the
+                 * selection stays inside one text
+                 * structure.
+                 */
                 range.surroundContents(
                     span
                 );
 
+                lastHighlight =
+                    span;
 
-                lastHighlight = span;
+            }
+            catch (error) {
 
-
-            } catch (error) {
-
+                /*
+                 * Avoid crashing the page when a
+                 * selection crosses DOM boundaries.
+                 */
                 console.log(
-                    "Please select text within one sentence."
+                    "Highlight selection could not be applied. Try selecting text within one sentence or section."
                 );
             }
 
@@ -380,247 +848,283 @@ function enableTextHighlighting(element) {
 }
 
 
-/* =====================================
-   UNDO
-===================================== */
+// -----------------------------
+// HIGHLIGHTING CONTROLS
+// -----------------------------
 
-function undoHighlight() {
+function setupHighlighting() {
 
-    if (!lastHighlight) {
-        return;
-    }
-
-
-    const parent =
-        lastHighlight.parentNode;
-
-
-    while (
-        lastHighlight.firstChild
-    ) {
-
-        parent.insertBefore(
-            lastHighlight.firstChild,
-            lastHighlight
-        );
-    }
-
-
-    parent.removeChild(
-        lastHighlight
-    );
-
-
-    lastHighlight = null;
-}
-
-
-/* =====================================
-   CLEAR HIGHLIGHTS
-===================================== */
-
-function clearHighlights() {
-
-    const highlights =
+    const colorButtons =
         document.querySelectorAll(
-            ".highlight"
+            ".tool-button[data-color]"
         );
 
 
-    highlights.forEach(
-        highlight => {
+    colorButtons.forEach(
+        (button) => {
 
-            const parent =
-                highlight.parentNode;
+            button.onclick = () => {
 
+                colorButtons.forEach(
+                    (item) => {
 
-            while (
-                highlight.firstChild
-            ) {
-
-                parent.insertBefore(
-                    highlight.firstChild,
-                    highlight
+                        item.classList.remove(
+                            "active"
+                        );
+                    }
                 );
-            }
 
 
-            parent.removeChild(
-                highlight
-            );
+                button.classList.add(
+                    "active"
+                );
+
+
+                currentHighlightColor =
+                    button.dataset.color;
+            };
         }
     );
 
 
-    lastHighlight = null;
-}
-
-
-/* =====================================
-   COVERAGE CHECK
-===================================== */
-
-function renderCoverage(list) {
-
-    const element =
+    const undoButton =
         document.getElementById(
-            "coverage-list"
+            "undo-highlight"
         );
 
 
-    element.innerHTML = "";
+    if (undoButton) {
+
+        undoButton.onclick = () => {
+
+            if (!lastHighlight) {
+
+                return;
+            }
 
 
-    if (!list || list.length === 0) {
+            const parent =
+                lastHighlight.parentNode;
 
-        element.innerHTML =
-            `<div class="empty-state">
-                No concepts found.
-            </div>`;
+
+            if (!parent) {
+
+                lastHighlight =
+                    null;
+
+                return;
+            }
+
+
+            while (
+                lastHighlight.firstChild
+            ) {
+
+                parent.insertBefore(
+                    lastHighlight.firstChild,
+                    lastHighlight
+                );
+            }
+
+
+            lastHighlight.remove();
+
+            lastHighlight =
+                null;
+        };
+    }
+
+
+    const clearButton =
+        document.getElementById(
+            "clear-highlights"
+        );
+
+
+    if (clearButton) {
+
+        clearButton.onclick = () => {
+
+            document
+                .querySelectorAll(
+                    ".highlight"
+                )
+                .forEach(
+                    (highlight) => {
+
+                        const parent =
+                            highlight.parentNode;
+
+
+                        if (!parent) {
+
+                            return;
+                        }
+
+
+                        while (
+                            highlight.firstChild
+                        ) {
+
+                            parent.insertBefore(
+                                highlight.firstChild,
+                                highlight
+                            );
+                        }
+
+
+                        highlight.remove();
+                    }
+                );
+
+
+            lastHighlight =
+                null;
+        };
+    }
+}
+
+
+// -----------------------------
+// SECURITY / HTML ESCAPING
+// -----------------------------
+
+function escapeHtml(
+    value
+) {
+
+    return String(value)
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+}
+
+
+// -----------------------------
+// TOPIC-AWARE NOTEBOOK THEME
+// -----------------------------
+
+function applyTopicTheme(
+    topic
+) {
+
+    const notebook =
+        document.querySelector(
+            ".notebook"
+        );
+
+
+    if (!notebook) {
 
         return;
     }
 
 
-    /* Summary */
-
-    const covered =
-        list.filter(
-            item =>
-                item.status === "Covered"
-        ).length;
+    const text =
+        String(topic)
+            .toLowerCase();
 
 
-    const partial =
-        list.filter(
-            item =>
-                item.status ===
-                "Partially covered"
-        ).length;
-
-
-    const needsReview =
-        list.filter(
-            item =>
-                item.status ===
-                "Needs review"
-        ).length;
-
-
-    const summary =
-        document.createElement("div");
-
-
-    summary.className =
-        "coverage-summary";
-
-
-    summary.innerHTML = `
-        <strong>
-            ${covered} of ${list.length}
-            concepts covered
-        </strong>
-
-        <div class="coverage-summary-counts">
-
-            <span>
-                🟢 ${covered}
-            </span>
-
-            <span>
-                🟡 ${partial}
-            </span>
-
-            <span>
-                🔴 ${needsReview}
-            </span>
-
-        </div>
-    `;
-
-
-    element.appendChild(
-        summary
+    notebook.classList.remove(
+        "theme-science",
+        "theme-math",
+        "theme-programming",
+        "theme-history",
+        "theme-business",
+        "theme-general"
     );
 
 
-    /* Individual concepts */
+    if (
+        text.includes("biology") ||
+        text.includes("photosynthesis") ||
+        text.includes("cell") ||
+        text.includes("plant") ||
+        text.includes("chemistry") ||
+        text.includes("physics") ||
+        text.includes("science")
+    ) {
 
-    list.forEach(item => {
-
-        const row =
-            document.createElement(
-                "div"
-            );
-
-
-        const statusClass =
-            item.status
-                .toLowerCase()
-                .replaceAll(
-                    " ",
-                    "-"
-                );
-
-
-        row.className =
-            `coverage-${statusClass}`;
-
-
-        const concept =
-            document.createElement(
-                "strong"
-            );
-
-
-        concept.innerText =
-            item.concept;
-
-
-        const status =
-            document.createElement(
-                "span"
-            );
-
-
-        status.innerText =
-            item.status;
-
-
-        const explanation =
-            document.createElement(
-                "small"
-            );
-
-
-        explanation.innerText =
-            item.explanation || "";
-
-
-        row.appendChild(
-            concept
+        notebook.classList.add(
+            "theme-science"
         );
 
+    }
+    else if (
+        text.includes("math") ||
+        text.includes("algebra") ||
+        text.includes("geometry") ||
+        text.includes("calculus") ||
+        text.includes("statistics")
+    ) {
 
-        row.appendChild(
-            document.createTextNode(
-                " "
-            )
+        notebook.classList.add(
+            "theme-math"
         );
 
+    }
+    else if (
+        text.includes("programming") ||
+        text.includes("python") ||
+        text.includes("javascript") ||
+        text.includes("coding") ||
+        text.includes("computer") ||
+        text.includes("software") ||
+        text.includes("database") ||
+        text.includes("dbms")
+    ) {
 
-        row.appendChild(
-            status
+        notebook.classList.add(
+            "theme-programming"
         );
 
+    }
+    else if (
+        text.includes("history") ||
+        text.includes("ancient") ||
+        text.includes("war") ||
+        text.includes("civilization") ||
+        text.includes("geography")
+    ) {
 
-        row.appendChild(
-            explanation
+        notebook.classList.add(
+            "theme-history"
         );
 
+    }
+    else if (
+        text.includes("business") ||
+        text.includes("economics") ||
+        text.includes("marketing") ||
+        text.includes("finance")
+    ) {
 
-        element.appendChild(
-            row
+        notebook.classList.add(
+            "theme-business"
         );
-    });
+
+    }
+    else {
+
+        notebook.classList.add(
+            "theme-general"
+        );
+    }
 }

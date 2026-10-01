@@ -134,7 +134,6 @@ generateButton.addEventListener(
                 );
 
 
-        // Basic validation
         if (!topic) {
 
             alert(
@@ -155,7 +154,6 @@ generateButton.addEventListener(
         }
 
 
-        // Reset previous highlight state
         lastHighlight = null;
 
 
@@ -284,18 +282,13 @@ function renderNotes(
 
 
     /*
-     * IMPORTANT:
      * index.html already contains
      * the notebook header.
-     *
-     * Therefore we do NOT create
-     * another header here.
      */
 
     area.innerHTML = "";
 
 
-    // Create highlighting toolbar
     createToolbar(
         area
     );
@@ -340,7 +333,6 @@ function renderNotes(
     }
 
 
-    // Render every note section
     sections.forEach(
         (
             section,
@@ -358,6 +350,17 @@ function renderNotes(
             heading.textContent =
                 section.heading ||
                 `Section ${index + 1}`;
+
+
+            /*
+             * Every note heading receives a normalized
+             * key so Coverage Check can find it later.
+             */
+            heading.dataset.noteKey =
+                normalizeNoteKey(
+                    section.heading ||
+                    `Section ${index + 1}`
+                );
 
 
             const body =
@@ -604,6 +607,19 @@ function renderCoverage(
                 className;
 
 
+            /*
+             * Coverage item is now connected to the
+             * corresponding note section.
+             */
+            const noteKey =
+                normalizeNoteKey(
+                    concept
+                );
+
+            item.dataset.noteKey =
+                noteKey;
+
+
             const title =
                 document.createElement(
                     "strong"
@@ -649,10 +665,195 @@ function renderCoverage(
             }
 
 
+            /*
+             * Clicking a Coverage concept jumps
+             * directly to its note.
+             */
+            item.addEventListener(
+                "click",
+                () => {
+
+                    jumpToNote(
+                        noteKey
+                    );
+                }
+            );
+
+
+            /*
+             * Give the user a visual hint that the
+             * Coverage item is interactive.
+             */
+            item.style.cursor =
+                "pointer";
+
+
             list.appendChild(
                 item
             );
         }
+    );
+}
+
+
+// -----------------------------
+// COVERAGE → NOTE CONNECTION
+// -----------------------------
+
+function normalizeNoteKey(
+    value
+) {
+
+    return String(
+        value || ""
+    )
+        .toLowerCase()
+        .replace(
+            /[^a-z0-9]+/g,
+            " "
+        )
+        .trim()
+        .replace(
+            /\s+/g,
+            " "
+        );
+}
+
+
+function jumpToNote(
+    noteKey
+) {
+
+    if (!noteKey) {
+
+        return;
+    }
+
+
+    const noteHeadings =
+        document.querySelectorAll(
+            "#notes-area .section-heading"
+        );
+
+
+    let matchingHeading = null;
+
+
+    noteHeadings.forEach(
+        (heading) => {
+
+            const headingKey =
+                normalizeNoteKey(
+                    heading.dataset.noteKey ||
+                    heading.textContent
+                );
+
+
+            if (
+                headingKey === noteKey &&
+                !matchingHeading
+            ) {
+
+                matchingHeading =
+                    heading;
+            }
+        }
+    );
+
+
+    /*
+     * No matching note exists.
+     * This is normal for a "Needs review"
+     * concept that the AI didn't put into notes.
+     */
+    if (!matchingHeading) {
+
+        return;
+    }
+
+
+    matchingHeading.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+    });
+
+
+    highlightNoteSection(
+        matchingHeading
+    );
+}
+
+
+function highlightNoteSection(
+    heading
+) {
+
+    const body =
+        heading.nextElementSibling;
+
+
+    const sourceReference =
+        body
+            ? body.nextElementSibling
+            : null;
+
+
+    /*
+     * Save original inline styles.
+     */
+    const originalHeadingBackground =
+        heading.style.backgroundColor;
+
+    const originalHeadingBoxShadow =
+        heading.style.boxShadow;
+
+    const originalBodyBackground =
+        body
+            ? body.style.backgroundColor
+            : "";
+
+
+    /*
+     * Temporary visual focus.
+     */
+    heading.style.transition =
+        "background-color 0.25s ease, box-shadow 0.25s ease";
+
+    heading.style.backgroundColor =
+        "#fff0a8";
+
+    heading.style.boxShadow =
+        "0 0 0 4px rgba(243, 217, 223, 0.7)";
+
+
+    if (body) {
+
+        body.style.transition =
+            "background-color 0.25s ease";
+
+        body.style.backgroundColor =
+            "rgba(255, 240, 168, 0.22)";
+    }
+
+
+    setTimeout(
+        () => {
+
+            heading.style.backgroundColor =
+                originalHeadingBackground;
+
+            heading.style.boxShadow =
+                originalHeadingBoxShadow;
+
+
+            if (body) {
+
+                body.style.backgroundColor =
+                    originalBodyBackground;
+            }
+
+        },
+        1400
     );
 }
 
@@ -817,11 +1018,6 @@ function enableTextHighlighting(
 
             try {
 
-                /*
-                 * surroundContents works when the
-                 * selection stays inside one text
-                 * structure.
-                 */
                 range.surroundContents(
                     span
                 );
@@ -832,10 +1028,6 @@ function enableTextHighlighting(
             }
             catch (error) {
 
-                /*
-                 * Avoid crashing the page when a
-                 * selection crosses DOM boundaries.
-                 */
                 console.log(
                     "Highlight selection could not be applied. Try selecting text within one sentence or section."
                 );

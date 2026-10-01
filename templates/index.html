@@ -1,23 +1,83 @@
 ﻿<!doctype html>
-
 <html lang="en">
 
 <head>
     <meta charset="utf-8">
 
-```
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
->
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
 
-<title>AI Notes Maker</title>
+    <title>AI Notes Maker</title>
 
-<link
-    rel="stylesheet"
-    href="/static/styles.css"
->
-```
+    <link
+        rel="stylesheet"
+        href="/static/styles.css"
+    >
+
+    <style>
+        /* ---------------------------------
+           Workflow indicator
+           --------------------------------- */
+
+        .workflow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 0 auto 28px;
+            flex-wrap: wrap;
+        }
+
+        .workflow-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 13px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            border-radius: 999px;
+            color: var(--muted);
+            font-size: 0.86rem;
+            font-weight: 600;
+            box-shadow: 0 3px 10px rgba(74, 70, 80, 0.04);
+        }
+
+        .workflow-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--lavender);
+            color: var(--text);
+            font-size: 0.76rem;
+            font-weight: 700;
+        }
+
+        .workflow-arrow {
+            color: var(--muted);
+            font-size: 1rem;
+        }
+
+        @media (max-width: 620px) {
+            .workflow {
+                gap: 7px;
+                margin-bottom: 22px;
+            }
+
+            .workflow-step {
+                font-size: 0.78rem;
+                padding: 8px 10px;
+            }
+
+            .workflow-arrow {
+                display: none;
+            }
+        }
+    </style>
 
 </head>
 
@@ -25,195 +85,250 @@
 
 <main class="container">
 
-```
-<!-- Header -->
+    <!-- Header -->
 
-<header class="header">
+    <header class="header">
 
-    <div class="logo">
-        ✦
-    </div>
-
-    <h1>AI Notes Maker</h1>
-
-    <p class="subtitle">
-        Turn your study material into clear, organized notes.
-    </p>
-
-</header>
-
-
-<!-- Source Input -->
-
-<section id="input">
-
-    <label for="topic">
-        What are you studying?
-    </label>
-
-    <input
-        id="topic"
-        type="text"
-        placeholder="e.g. Photosynthesis"
-    >
-
-
-    <div class="source-heading">
-
-        <label>
-            Add your study material
-        </label>
-
-        <span>
-            Add at least 2 sources
-        </span>
-
-    </div>
-
-
-    <div id="sources-container">
-
-        <div class="source-card">
-
-            <div class="source-card-header">
-
-                <strong>
-                    Source 1
-                </strong>
-
-            </div>
-
-            <textarea
-                class="source-input"
-                placeholder="Paste your first source here..."
-            ></textarea>
-
+        <div class="logo">
+            ✦
         </div>
 
+        <h1>AI Notes Maker</h1>
 
-        <div class="source-card">
-
-            <div class="source-card-header">
-
-                <strong>
-                    Source 2
-                </strong>
-
-            </div>
-
-            <textarea
-                class="source-input"
-                placeholder="Paste your second source here..."
-            ></textarea>
-
-        </div>
-
-    </div>
-
-
-    <button
-        id="add-source"
-        type="button"
-        class="secondary-button"
-    >
-        + Add another source
-    </button>
-
-
-    <p class="hint">
-        ✦ Use separate source boxes so each source can be identified clearly.
-    </p>
-
-
-    <button
-        id="generate"
-        type="button"
-    >
-        ✦ Generate Notes
-    </button>
-
-</section>
-
-
-<!-- Results -->
-
-<section id="results">
-
-
-    <!-- Coverage -->
-
-    <aside
-        id="coverage"
-        class="panel"
-    >
-
-        <div class="panel-title">
-
-            <span>☑</span>
-
-            <h2>Coverage Check</h2>
-
-        </div>
-
-        <p class="panel-description">
-            See which important concepts appear in your notes.
+        <p class="subtitle">
+            Turn your study material into clear, organized notes.
         </p>
 
-        <div id="coverage-list">
-
-            <div class="empty-state">
-                Your coverage results will appear here.
-            </div>
-
-        </div>
-
-    </aside>
+    </header>
 
 
-    <!-- Notebook -->
+    <!-- Workflow -->
 
-    <article
-        id="notebook"
-        class="notebook"
+    <div
+        class="workflow"
+        aria-label="How AI Notes Maker works"
     >
 
-        <div class="notebook-header">
-
-            <span class="notebook-icon">
-                ♡
+        <div class="workflow-step">
+            <span class="workflow-number">
+                1
             </span>
 
-            <div>
+            <span>
+                Add Sources
+            </span>
+        </div>
 
-                <h2>My Notes</h2>
 
-                <p>
-                    Organized study material
-                </p>
+        <span
+            class="workflow-arrow"
+            aria-hidden="true"
+        >
+            →
+        </span>
+
+
+        <div class="workflow-step">
+            <span class="workflow-number">
+                2
+            </span>
+
+            <span>
+                Generate Notes
+            </span>
+        </div>
+
+
+        <span
+            class="workflow-arrow"
+            aria-hidden="true"
+        >
+            →
+        </span>
+
+
+        <div class="workflow-step">
+            <span class="workflow-number">
+                3
+            </span>
+
+            <span>
+                Check Coverage
+            </span>
+        </div>
+
+    </div>
+
+
+    <!-- Source Input -->
+
+    <section id="input">
+
+        <label for="topic">
+            What are you studying?
+        </label>
+
+        <input
+            id="topic"
+            type="text"
+            placeholder="e.g. Photosynthesis"
+        >
+
+
+        <div class="source-heading">
+
+            <label>
+                Add your study material
+            </label>
+
+            <span>
+                Add at least 2 sources
+            </span>
+
+        </div>
+
+
+        <div id="sources-container">
+
+            <div class="source-card">
+
+                <div class="source-card-header">
+
+                    <strong>
+                        Source 1
+                    </strong>
+
+                </div>
+
+                <textarea
+                    class="source-input"
+                    placeholder="Paste your first source here..."
+                ></textarea>
+
+            </div>
+
+
+            <div class="source-card">
+
+                <div class="source-card-header">
+
+                    <strong>
+                        Source 2
+                    </strong>
+
+                </div>
+
+                <textarea
+                    class="source-input"
+                    placeholder="Paste your second source here..."
+                ></textarea>
 
             </div>
 
         </div>
 
 
-        <div id="notes-area">
+        <button
+            id="add-source"
+            type="button"
+            class="secondary-button"
+        >
+            + Add another source
+        </button>
 
-            <div class="empty-notes">
 
-                <span>✎</span>
+        <p class="hint">
+            ✦ Use separate source boxes so each source can be identified clearly.
+        </p>
 
-                <p>
-                    Your notes will appear here.
-                </p>
+
+        <button
+            id="generate"
+            type="button"
+        >
+            ✦ Generate Notes
+        </button>
+
+    </section>
+
+
+    <!-- Results -->
+
+    <section id="results">
+
+        <!-- Coverage -->
+
+        <aside
+            id="coverage"
+            class="panel"
+        >
+
+            <div class="panel-title">
+
+                <span>☑</span>
+
+                <h2>Coverage Check</h2>
 
             </div>
 
-        </div>
+            <p class="panel-description">
+                See which important concepts appear in your notes.
+            </p>
 
-    </article>
+            <div id="coverage-list">
 
-</section>
-```
+                <div class="empty-state">
+                    Your coverage results will appear here.
+                </div>
+
+            </div>
+
+        </aside>
+
+
+        <!-- Notebook -->
+
+        <article
+            id="notebook"
+            class="notebook"
+        >
+
+            <div class="notebook-header">
+
+                <span class="notebook-icon">
+                    ♡
+                </span>
+
+                <div>
+
+                    <h2>My Notes</h2>
+
+                    <p>
+                        Organized study material
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div id="notes-area">
+
+                <div class="empty-notes">
+
+                    <span>✎</span>
+
+                    <p>
+                        Your notes will appear here.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </article>
+
+    </section>
 
 </main>
 
